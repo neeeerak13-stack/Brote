@@ -1,0 +1,7 @@
+{
+  "appId": "com.broteapp.estudio",
+  "appName": "Brote",
+  "webDir": "docs",
+  "server": { "androidScheme": "https" },
+  "android": { "allowMixedContent": false }
+}

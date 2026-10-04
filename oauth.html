@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conectando con Brote…</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#FBF6EE;font:16px/1.5 system-ui,sans-serif;color:#1D2230;text-align:center;padding:24px}
+a{display:inline-block;margin-top:16px;background:#1D2230;color:#fff;text-decoration:none;font-weight:700;border-radius:99px;padding:12px 24px;border:2px solid #1D2230;box-shadow:3px 3px 0 #FFE59A}p{margin:6px 0}</style></head>
+<body><main><h1 id="t" style="margin:0 0 8px">Conectando con Brote…</h1><p id="m">Un momento, te llevo de vuelta a la app.</p><a id="b" href="#" hidden>Abrir Brote</a></main>
+<script>
+(function(){
+ var h=location.hash||'',q=new URLSearchParams(h.replace(/^#/,'')),st=q.get('state')||'',url,app=/^app/.test(st);
+ if(!h||(!q.get('access_token')&&!q.get('error'))){document.getElementById('t').textContent='Esta página es solo el retorno de Google';document.getElementById('m').textContent='Abre la app Brote y toca «Conectar con Google».';return}
+ if(app)url='com.broteapp.estudio://oauth'+h;
+ else if(/^web:/.test(st))url=st.slice(4)+h;
+ else url='index.html'+h;
+ var b=document.getElementById('b');b.href=url;b.hidden=false;window.__target=url;
+ if(q.get('error')){document.getElementById('t').textContent='Google no pudo conectar';document.getElementById('m').textContent=q.get('error_description')||q.get('error')}
+ setTimeout(function(){location.replace(url)},60);
+})();
+</script></body></html>
