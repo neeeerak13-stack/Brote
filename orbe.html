@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#001619">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<title>Aurora</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/aurora-ui.css">
+</head>
+<body>
+<div class="bg"><div class="sky"></div><div class="stars" id="stars"></div><div class="auroras"></div><div class="shoot" id="shoot"></div></div>
+
+<header>
+  <div class="brand"><img class="logo" alt="Universidad Nacional de Colombia" src="logo-unal.png"><small>SEDE PALMIRA</small></div>
+  <div class="hbtns">
+    <div class="chip-lv pillb" id="chip-level" role="button" tabindex="0" onclick="AU.openModal('modal-challenges')"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.7 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z"/></svg><span id="lvl-t">Nvl 1</span></div>
+    <button class="btn-user pillb" aria-label="Perfil" onclick="AU.openModal('modal-profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/></svg></button>
+  </div>
+</header>
+
+<!-- MATERIAS -->
+<section class="tab" id="tab-materias">
+  <div class="mhead">
+    <div><h2>Materias</h2>
+      <div class="sem" onclick="document.getElementById('input-semestre').focus()"><input id="input-semestre" value="Semestre actual" maxlength="30" aria-label="Nombre del semestre" onblur="AU.saveSemestre()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></div></div>
+    <button class="addb pillb" aria-label="Agregar materia" onclick="AU.openModal('modal-add-course')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+  <div class="pills">
+    <button class="pl on">Activas</button>
+    <button class="pl" onclick="AU.openModal('modal-planner')">Planificador</button>
+    <button class="pl" onclick="AU.openModal('modal-library')">Biblioteca</button>
+    <button class="pl" onclick="AU.openModal('modal-history')">Historial</button>
+  </div>
+  <div class="sum" id="msum"></div>
+  <div id="courses-list"></div>
+</section>
+
+<!-- ORBE -->
+<section class="tab stage on" id="tab-inicio">
+  <div class="orb-zone" id="orb-zone">
+    <div class="tilt" id="tilt">
+      <div class="halo"></div><div class="floor"></div>
+      <div class="orb" id="aurora-orb" onclick="AU.orbTap()" role="button" aria-label="Hablar con Aurora">
+        <div class="sphere"><div class="under"></div><div class="eglow"></div></div>
+        <svg id="orb-eyes" viewBox="0 0 200 200" aria-hidden="true"><g class="gaze"><g class="look" id="look"></g></g></svg>
+        <div class="sphere" style="background:none;box-shadow:none;pointer-events:none"><div class="hl"></div><div class="glint"></div></div>
+        <div class="rim"></div>
+        <span class="ripple"></span><span class="ripple"></span><span class="ripple"></span>
+      </div>
+    </div>
+  </div>
+  <div class="wave" id="wave"><i></i><i></i><i></i><i></i><i></i></div>
+  <div id="listen-indicator">Toca el orbe para hablar</div>
+  <div class="msg" id="msg" onclick="AU.openChat()">
+    <div class="who" id="who"><i></i>Aurora</div>
+    <button class="spk" id="orb-voice" aria-label="Escuchar a Aurora" onclick="event.stopPropagation();AU.speakLast()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg></button>
+    <p id="mensaje-orbe"></p>
+  </div>
+  <div class="bar" style="padding:0;width:100%;max-width:420px">
+    <button id="mic-btn" class="gb" aria-label="Hablar con Aurora" onclick="AU.mic()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></button>
+    <input id="chat-input" class="gb" type="text" placeholder="Pregúntale a Aurora…" autocomplete="off" enterkeyhint="send">
+    <button id="send-btn" aria-label="Enviar" onclick="AU.sendText()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+  </div>
+</section>
+
+<!-- ANÁLISIS -->
+<section class="tab" id="tab-analisis"><div class="scr">
+  <div class="ahead"><h2>Análisis</h2><p>Rendimiento global</p></div>
+  <div class="hero" style="--i:0">
+    <div class="lab2" id="an-label">PAPA estimado</div>
+    <div class="pring"><svg viewBox="0 0 100 100"><circle class="tr" cx="50" cy="50" r="45"/><circle id="papa-ring" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"/></svg><div id="papa-display">0.0</div></div>
+    <span class="pill2" style="--c:80,232,244" id="an-pill">Promedio ponderado</span>
+    <div class="delta" id="papa-delta"></div>
+  </div>
+  <div class="grid2">
+    <div class="stat ok" style="--i:1"><b id="stat-passed">0</b><span>Aprobadas</span></div>
+    <div class="stat bad" style="--i:2"><b id="stat-risk">0</b><span>En riesgo</span></div>
+    <div class="stat" style="--i:3"><b id="stat-credits">0</b><span>Créditos</span></div>
+    <div class="stat" style="--i:4"><b id="stat-eval">0%</b><span>Evaluado</span></div>
+  </div>
+  <div class="card2" style="--i:5"><div class="sech"><h4>Notas por materia</h4></div><div id="an-bars"></div></div>
+  <div class="card2" style="--i:6"><div class="sech"><h4>Evolución por semestre</h4></div><div class="evo" id="an-evo"></div></div>
+  <div class="card2" style="--i:7"><div class="sech"><h4>Estadísticas</h4></div><div id="an-stats"></div></div>
+  <p class="note" id="an-note">El PAPA es una estimación local con las definitivas disponibles; no reemplaza el registro oficial de la UNAL.</p>
+  <button class="btn ghost" style="flex:none;width:100%" onclick="AU.openModal('modal-history')">Ver historial de semestres</button>
+</div></section>
+
+<nav class="nav" id="nav" aria-label="Navegación principal">
+  <div class="drop" id="drop" style="transform:translateX(100%)"><div class="dropin" id="dropin"></div></div>
+  <button class="tabb" id="btn-materias" onclick="AU.switchTab('materias',0)"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 016.5 3H20v15H6.5A2.5 2.5 0 004 20.5z"/><path d="M4 20.5A2.5 2.5 0 006.5 23H20v-5M9 7.5h7"/></svg></span><span>Materias</span></button>
+  <button class="tabb on" id="btn-inicio" onclick="AU.switchTab('inicio',1)"><span class="ic"><span class="mini"></span></span><span>Orbe</span></button>
+  <button class="tabb" id="btn-analisis" onclick="AU.switchTab('analisis',2)"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></span><span>Análisis</span></button>
+</nav>
+
+<!-- Detalle de materia -->
+<div class="ov" id="modal-course-details"><div class="ovin">
+  <div class="ovh"><button class="ib pillb" aria-label="Volver" onclick="AU.closeModal('modal-course-details')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h3 id="details-course-name">Materia</h3><button class="ib pillb" aria-label="Editar materia" onclick="AU.editCourse()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button></div>
+  <div class="ovb">
+    <div class="hero" id="hero">
+      <div class="ring"><span id="d-svg"></span><b id="details-course-grade">0.0</b></div>
+      <span class="pill2" id="details-course-message">Sin notas todavía</span>
+      <div class="pct" id="details-course-percentage">0% evaluado</div>
+    </div>
+    <div class="qa">
+      <button class="pillb" onclick="AU.openModal('modal-materials')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Materiales</button>
+      <button class="pillb" onclick="AU.openModal('modal-dates')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2zM4 10h16M8 3v4M16 3v4"/></svg>Fechas</button>
+    </div>
+    <div class="sech"><h4>Evaluaciones</h4><button class="addn" onclick="AU.openEval()">+ Evaluación</button></div>
+    <div class="glist" id="grades-list"></div>
+    <button class="btn danger" id="del-btn" style="width:100%;margin-top:28px;flex:none" onclick="AU.deleteCurrentCourse()">Eliminar materia</button>
+  </div>
+</div></div>
+
+<!-- Subpantallas -->
+<div class="ov" id="modal-sub"><div class="ovin">
+  <div class="ovh"><button class="ib pillb" aria-label="Volver" onclick="AU.closeSub()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h3 id="sub-title"></h3><div style="width:42px"></div></div>
+  <div class="ovb" id="sub-body"></div>
+</div></div>
+<button class="fab" id="sub-fab" aria-label="Agregar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+
+<!-- Conversación -->
+<div class="ov" id="modal-chat"><div class="ovin">
+  <div class="ovh"><button class="ib pillb" aria-label="Volver" onclick="AU.closeModal('modal-chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h3>Conversación</h3><button class="ib pillb" aria-label="Borrar conversación" onclick="AU.clearChat()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>
+  <div class="ovb" id="chat-log"></div>
+</div></div>
+
+<!-- Hojas -->
+<div class="sheet" id="modal-add-course" onclick="if(event.target===this)AU.closeModal('modal-add-course')"><div class="sbox" id="modal-add-course-content">
+  <div class="grab"></div><h3>Nueva materia</h3>
+  <input class="fld" id="input-course-name" type="text" placeholder="Nombre (ej. Cálculo)" autocomplete="off" maxlength="40">
+  <input class="fld" id="input-course-credits" type="number" inputmode="numeric" placeholder="Créditos (1 a 30)" min="1" max="30">
+  <div class="qc"><button onclick="AU.setCr(1)">1</button><button onclick="AU.setCr(2)">2</button><button onclick="AU.setCr(3)">3</button><button onclick="AU.setCr(4)">4</button><button onclick="AU.setCr(5)">5</button></div>
+  <div class="err" id="err-course"></div>
+  <div class="acts"><button class="btn ghost" onclick="AU.closeModal('modal-add-course')">Cancelar</button><button class="btn" onclick="AU.addCourse()">Añadir</button></div>
+</div></div>
+<div class="sheet" id="modal-edit-course" onclick="if(event.target===this)AU.closeModal('modal-edit-course')"><div class="sbox">
+  <div class="grab"></div><h3>Editar materia</h3>
+  <input class="fld" id="edit-course-name" type="text" placeholder="Nombre" autocomplete="off" maxlength="40">
+  <input class="fld" id="edit-course-credits" type="number" inputmode="numeric" placeholder="Créditos" min="1" max="30">
+  <div class="err" id="err-edit-course"></div>
+  <div class="acts"><button class="btn ghost" onclick="AU.closeModal('modal-edit-course')">Cancelar</button><button class="btn" onclick="AU.saveCourse()">Guardar</button></div>
+</div></div>
+<div class="sheet" id="modal-eval" onclick="if(event.target===this)AU.closeModal('modal-eval')"><div class="sbox">
+  <div class="grab"></div><h3 id="eval-title">Nueva evaluación</h3>
+  <input class="fld" id="eval-name" type="text" placeholder="Nombre (ej. Parcial 1)" autocomplete="off" maxlength="40">
+  <div class="two"><input class="fld" id="eval-weight" type="number" inputmode="decimal" placeholder="Porcentaje (%)" min="0" max="100" oninput="AU.previewEval()"><input class="fld" id="eval-score" type="number" inputmode="decimal" step="0.1" placeholder="Nota (0 a 5)" min="0" max="5" oninput="AU.previewEval()"></div>
+  <label class="lab3" for="eval-date">Fecha (opcional)</label>
+  <input class="fld" id="eval-date" type="date">
+  <div class="hint" id="eval-hint"></div><div class="err" id="err-eval"></div>
+  <div class="acts"><button class="btn ghost" onclick="AU.closeModal('modal-eval')">Cancelar</button><button class="btn" onclick="AU.saveEval()">Guardar</button></div>
+</div></div>
+<div class="sheet" id="modal-add-file" onclick="if(event.target===this)AU.closeModal('modal-add-file')"><div class="sbox">
+  <div class="grab"></div><h3>Añadir fuente</h3>
+  <label class="lab3" for="src-subject">Materia</label><select class="fld sel" id="src-subject"></select>
+  <input class="fld" id="src-title" type="text" placeholder="Título (opcional)" autocomplete="off" maxlength="60">
+  <div class="row" onclick="document.getElementById('f-file').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7zM14 3v5h5M9.5 14h5M9.5 17h5"/></svg><span>PDF, imagen o texto<small>Aurora podrá leerlo cuando le preguntes</small></span></div>
+  <div class="row" onclick="document.getElementById('f-cam').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 100-7 3.5 3.5 0 000 7z"/></svg><span>Tomar una foto<small>Apuntes del tablero o del cuaderno</small></span></div>
+  <textarea class="fld tx" id="src-body" placeholder="O pega un texto o un enlace de YouTube"></textarea>
+  <div class="err" id="err-src"></div>
+  <div class="acts"><button class="btn ghost" onclick="AU.closeModal('modal-add-file')">Cancelar</button><button class="btn" onclick="AU.saveTextSource()">Guardar texto o enlace</button></div>
+  <input type="file" id="f-file" accept=".pdf,.txt,.md,.csv,image/*" multiple hidden onchange="AU.onFiles(this)"><input type="file" id="f-cam" accept="image/*" capture="environment" hidden onchange="AU.onFiles(this)">
+</div></div>
+<div class="sheet" id="modal-add-task" onclick="if(event.target===this)AU.closeModal('modal-add-task')"><div class="sbox">
+  <div class="grab"></div><h3>Nuevo pendiente</h3>
+  <input class="fld" id="input-task-title" type="text" placeholder="¿Qué tienes que hacer?" autocomplete="off" maxlength="60">
+  <div class="two"><input class="fld" id="input-task-date" type="date"><select class="fld sel" id="input-task-course"></select></div>
+  <div class="err" id="err-task"></div>
+  <div class="acts"><button class="btn ghost" onclick="AU.closeModal('modal-add-task')">Cancelar</button><button class="btn" onclick="AU.addTask()">Guardar</button></div>
+</div></div>
+<div class="sheet" id="modal-close-sem" onclick="if(event.target===this)AU.closeModal('modal-close-sem')"><div class="sbox">
+  <div class="grab"></div><h3>Cerrar semestre</h3>
+  <p class="note" style="margin:-6px 4px 12px">Guardo tus materias actuales en el historial y empiezas un semestre limpio. Tu nivel y tu racha se conservan.</p>
+  <input class="fld" id="close-sem-name" type="text" placeholder="Nombre del semestre que termina" autocomplete="off" maxlength="30">
+  <div class="err" id="err-close-sem"></div>
+  <div class="acts"><button class="btn ghost" onclick="AU.closeModal('modal-close-sem')">Cancelar</button><button class="btn" onclick="AU.confirmCloseSemester()">Archivar</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="js/aurora-academic-core.js"></script>
+<script src="js/aurora-academic-adapter.js"></script>
+<script src="js/aurora-academic-services.js"></script>
+<script src="js/aurora-legacy-bridge.js"></script>
+<script src="js/aurora-orbe-assistant.js"></script>
+<script src="js/aurora-orbe-ui.js"></script>
+</body>
+</html>

@@ -1,1 +1,1 @@
-window.BROTE_CONFIG={pages:"",clientId:""};
+window.AURORA_CONFIG={pages:"",clientId:""};

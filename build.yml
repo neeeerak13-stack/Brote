@@ -1,4 +1,4 @@
-name: Construir Brote
+name: Construir Aurora
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: brote-build
+  group: aurora-build
   cancel-in-progress: true
 
 env:
@@ -29,7 +29,7 @@ jobs:
         run: |
           OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           REPO="${GITHUB_REPOSITORY#*/}"
-          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+          printf 'window.AURORA_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
           cat docs/config.js
 
       - name: Instalar Node
@@ -45,6 +45,9 @@ jobs:
 
       - name: Instalar dependencias
         run: npm install --no-audit --no-fund
+
+      - name: Ejecutar pruebas académicas
+        run: npm test
 
       - name: Crear el proyecto Android
         run: npx cap add android
@@ -68,21 +71,21 @@ jobs:
           ./gradlew assembleDebug --no-daemon
 
       - name: Preparar el archivo
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Brote.apk
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Aurora.apk
 
       - name: Guardar el APK como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: Brote-apk
-          path: Brote.apk
+          name: Aurora-apk
+          path: Aurora.apk
 
       - name: Publicar el APK en Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
-          name: Brote ${{ github.run_number }}
-          body: "Descarga Brote.apk e instálalo en tu celular Android."
-          files: Brote.apk
+          name: Aurora ${{ github.run_number }}
+          body: "Descarga Aurora.apk e instálalo en tu celular Android."
+          files: Aurora.apk
           make_latest: true
 
   pages:
@@ -99,7 +102,7 @@ jobs:
         run: |
           OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           REPO="${GITHUB_REPOSITORY#*/}"
-          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+          printf 'window.AURORA_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
 
       - name: Preparar Pages
         uses: actions/configure-pages@v5

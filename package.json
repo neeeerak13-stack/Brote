@@ -1,8 +1,8 @@
 {
-  "name": "brote",
-  "version": "1.0.0",
+  "name": "aurora-academico",
+  "version": "1.4.0",
   "private": true,
-  "description": "Brote: tu profesora personal de estudio",
+  "description": "Aurora: gestión académica personal con panel Orbe integrado",
   "dependencies": {
     "@capacitor/android": "^6.0.0",
     "@capacitor/app": "^6.0.0",
@@ -12,5 +12,9 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.0"
+  },
+  "scripts": {
+    "test": "node tests/aurora-legacy-bridge.test.js && node tests/aurora-integration.test.js && node tests/aurora-ui-academic.test.js && node tests/aurora-orbe-integration.test.js && node tests/aurora-orbe-assistant.test.js",
+    "test:ui": "node tests/ui-integration.playwright.js"
   }
 }

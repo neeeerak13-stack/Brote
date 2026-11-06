@@ -1,7 +1,11 @@
 {
   "appId": "com.broteapp.estudio",
-  "appName": "Brote",
+  "appName": "Aurora",
   "webDir": "docs",
-  "server": { "androidScheme": "https" },
-  "android": { "allowMixedContent": false }
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
 }

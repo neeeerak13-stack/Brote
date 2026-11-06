@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="es" class="antialiased">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Aurora - Asistente Académico</title>
+  <meta name="theme-color" content="#001619" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            abyss: '#001619',
+            void: '#020B12',
+            fluorescent: '#50E8F4',
+            thinair: '#C7F8FE',
+            auroragreen: '#5CF2A0',
+            aurorablue: '#1FA3A8',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 20px);
+      --sab: env(safe-area-inset-bottom, 20px);
+    }
+    
+    body {
+      background-color: #001619;
+      color: #ffffff;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      overflow: hidden;
+    }
+    ::-webkit-scrollbar { display: none; }
+
+    /* FONDOS: COSMOS Y AURORAS */
+    .bg-cosmos {
+      position: fixed; inset: 0; z-index: -2;
+      background: radial-gradient(circle at 50% 0%, #020B12 0%, #001619 100%);
+    }
+    .stars {
+      position: absolute; inset: 0;
+      background-image: 
+        radial-gradient(1.5px 1.5px at 20px 30px, rgba(255,255,255,0.9), rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 150px 180px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 80px 250px, rgba(199,248,254,0.6), rgba(0,0,0,0)),
+        radial-gradient(2.5px 2.5px at 280px 80px, rgba(255,255,255,0.8), rgba(0,0,0,0));
+      background-size: 350px 350px;
+      opacity: 0.5;
+      animation: twinkle 6s infinite alternate ease-in-out;
+    }
+    .aurora-1 {
+      position: absolute; top: -10%; left: -20%; width: 80vw; height: 60vh;
+      background: #1FA3A8; filter: blur(140px); opacity: 0.3; border-radius: 50%;
+      animation: drift1 30s infinite alternate ease-in-out;
+    }
+    .aurora-2 {
+      position: absolute; bottom: 10%; right: -20%; width: 70vw; height: 50vh;
+      background: #5CF2A0; filter: blur(150px); opacity: 0.2; border-radius: 50%;
+      animation: drift2 35s infinite alternate-reverse ease-in-out;
+    }
+    .film-noise {
+      position: fixed; inset: 0; z-index: -1; opacity: 0.05; mix-blend-mode: overlay; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    /* GLASSMORPHISM & CHIPS */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-top: 1px solid rgba(200, 248, 254, 0.15);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+    }
+    .chip-glass {
+      background: rgba(0, 22, 25, 0.4);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 0 10px rgba(80, 232, 244, 0.1);
+    }
+    
+    /* EL ORBE Y LOS OJOS */
+    .orb-wrapper {
+      position: relative; width: 200px; height: 200px; margin: 0 auto; perspective: 1000px;
+      animation: floatBreath 7s ease-in-out infinite;
+    }
+    .orb-glass {
+      width: 100%; height: 100%; border-radius: 50%; position: absolute; inset: 0;
+      background: radial-gradient(circle at 60% 60%, rgba(0,22,25,0.4) 20%, rgba(2,11,18,0.8) 80%);
+      box-shadow: 
+        inset 0 30px 40px -15px rgba(255,255,255,0.3), /* Reflejo sup */
+        inset 20px 0 40px -10px rgba(80,232,244,0.3),  /* Glow cian lat */
+        inset -25px -25px 60px rgba(0,22,25,1),      /* Sombra inf */
+        0 0 40px rgba(80,232,244,0.15),
+        0 25px 50px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      z-index: 10; pointer-events: none;
+    }
+    .orb-glass::after { /* Destello inferior */
+      content: ''; position: absolute; bottom: 25px; right: 25px;
+      width: 45px; height: 18px; border-radius: 50%; background: #fff;
+      filter: blur(6px); transform: rotate(-35deg); opacity: 0.8;
+    }
+
+    /* Ojos del Orbe */
+    .orb-interior {
+      position: absolute; inset: 15px; border-radius: 50%;
+      background: #00080A; overflow: hidden;
+      box-shadow: inset 0 0 30px #000; z-index: 5;
+    }
+    .eyes-container {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex; gap: 24px; align-items: center; justify-content: center;
+      transition: transform 0.1s ease-out; /* Para el eye tracking */
+    }
+    .eye {
+      width: 22px; height: 34px; border-radius: 20px;
+      background: #50E8F4;
+      box-shadow: 0 0 15px rgba(80,232,244,0.6), inset 0 0 5px #fff;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-origin: center;
+    }
+
+    /* Expresiones (Clases de CSS para los ojos) */
+    .eyes-reposo .eye {} /* Default */
+    
+    .eyes-feliz .eye {
+      height: 16px; width: 28px; border-radius: 20px 20px 0 0;
+      background: transparent; border-top: 6px solid #50E8F4; box-shadow: 0 -5px 15px rgba(80,232,244,0.6);
+      margin-top: -8px;
+    }
+    
+    .eyes-triste .eye {
+      height: 24px; width: 24px; border-radius: 20px 20px 10px 10px;
+    }
+    .eyes-triste .eye:first-child { transform: rotate(15deg) translateY(5px); }
+    .eyes-triste .eye:last-child { transform: rotate(-15deg) translateY(5px); }
+    
+    .eyes-enojada .eye {
+      height: 18px; width: 26px; border-radius: 0 0 20px 20px;
+      background: #50E8F4; margin-top: 5px;
+    }
+    .eyes-enojada .eye:first-child { transform: rotate(20deg); }
+    .eyes-enojada .eye:last-child { transform: rotate(-20deg); }
+
+    .eyes-sorprendida .eye {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: transparent; border: 6px solid #50E8F4;
+    }
+
+    .eyes-pensando .eye {
+      height: 18px; width: 22px; border-radius: 50%; transform: translateY(-10px);
+    }
+    .eyes-pensando .eye:first-child { transform: translateY(-10px) translateX(5px); }
+
+    .eyes-hablando .eye {
+      animation: talkBounce 0.3s infinite alternate ease-in-out;
+    }
+    
+    .eyes-loca .eye {
+      width: 26px; height: 26px; border-radius: 4px;
+      animation: spinLoco 2s infinite linear;
+    }
+
+    @keyframes talkBounce { 0% { height: 34px; } 100% { height: 20px; transform: translateY(4px); } }
+    @keyframes spinLoco { 100% { transform: rotate(360deg) scale(1.2); } }
+    .blink .eye { transform: scaleY(0.1) !important; transition: transform 0.1s ease !important; }
+
+    /* Barra Inferior (Liquid Glass Pill) */
+    .pill-nav {
+      background: rgba(2, 11, 18, 0.4);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
+      border-radius: 100px;
+    }
+    .nav-indicator {
+      position: absolute; top: 6px; bottom: 6px; left: 6px;
+      width: calc(33.33% - 8px);
+      background: rgba(255,255,255,0.1); border-radius: 100px;
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* Spring physics */
+      box-shadow: inset 0 0 10px rgba(80,232,244,0.1);
+    }
+
+    /* Pantalla Splash */
+    #splash {
+      position: fixed; inset: 0; z-index: 100;
+      background: #00080A; display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    /* Animaciones Base */
+    @keyframes floatBreath {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+    @keyframes drift1 { 100% { transform: translate(12vw, 8vh) scale(1.1); } }
+    @keyframes drift2 { 100% { transform: translate(-10vw, -8vh) scale(1.05); } }
+    @keyframes twinkle { 0% { opacity: 0.3; } 100% { opacity: 0.7; } }
+    
+    .fade-up-enter { animation: fadeUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+    .haptic-active:active { transform: scale(0.96); transition: transform 0.1s; filter: brightness(1.2); }
+
+    /* Progreso SVG */
+    .progress-ring { transition: stroke-dashoffset 1s cubic-bezier(0.34, 1.56, 0.64, 1); transform: rotate(-90deg); transform-origin: 50% 50%; }
+  </style>
+</head>
+<body class="w-full h-[100dvh] flex flex-col relative text-thinair">
+
+  <!-- CAPAS COSMOS -->
+  <div class="bg-cosmos"></div>
+  <div class="stars"></div>
+  <div class="aurora-1"></div>
+  <div class="aurora-2"></div>
+  <div class="film-noise"></div>
+
+  <!-- SPLASH SCREEN -->
+  <div id="splash">
+    <div class="orb-wrapper" style="transform: scale(1.2);">
+      <div class="orb-interior">
+        <div class="eyes-container eyes-reposo" id="splash-eyes">
+          <div class="eye" style="height: 2px;"></div>
+          <div class="eye" style="height: 2px;"></div>
+        </div>
+      </div>
+      <div class="orb-glass"></div>
+    </div>
+  </div>
+
+  <!-- HEADER INTEGRADO (Respeta Safe Area) -->
+  <header class="absolute top-0 w-full z-40 px-6 pt-[calc(var(--sat)+16px)] flex justify-between items-start pointer-events-none">
+    <div class="flex flex-col">
+      <h1 class="font-display font-semibold text-[10px] tracking-[0.2em] leading-tight text-white/90">
+        UNIVERSIDAD NACIONAL<br>DE COLOMBIA
+      </h1>
+      <span class="font-sans text-[8px] uppercase tracking-[0.3em] text-thinair/60 mt-1">Sede Palmira</span>
+    </div>
+    
+    <div class="chip-glass rounded-full px-3 py-1.5 flex items-center gap-2 pointer-events-auto shadow-lg">
+      <span class="font-sans text-[7px] font-bold uppercase tracking-widest text-thinair/70">PAPA GLOBAL</span>
+      <div class="flex items-center gap-1.5">
+        <span id="header-dot" class="w-1.5 h-1.5 rounded-full bg-fluorescent shadow-[0_0_8px_#50E8F4]"></span>
+        <span id="header-papa" class="font-display font-bold text-sm text-white">0.0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 w-full h-full relative pt-[calc(var(--sat)+80px)] pb-[calc(var(--sab)+100px)] z-10" id="main-container">
+    
+    <!-- TAB 1: EL ORBE -->
+    <section id="tab-inicio" class="tab-content h-full flex flex-col px-6 fade-up-enter">
+      <div class="flex-1 flex flex-col justify-center relative items-center" id="orb-hitbox">
+        <!-- El Orbe Interactivo -->
+        <div class="orb-wrapper haptic-active cursor-pointer" id="main-orb" onclick="interactWithOrb()">
+          <div class="orb-interior">
+            <div class="eyes-container eyes-reposo" id="orb-eyes">
+              <div class="eye"></div>
+              <div class="eye"></div>
+            </div>
+          </div>
+          <div class="orb-glass"></div>
+        </div>
+      </div>
+
+      <!-- Diálogo / Chat -->
+      <div class="w-full max-w-sm mx-auto flex flex-col gap-3">
+        <div class="glass-panel rounded-3xl p-5 relative">
+          <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="sparkles" class="w-4 h-4 text-fluorescent"></i>
+            <span class="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-fluorescent">Aurora</span>
+          </div>
+          <p id="orb-message" class="font-sans text-sm leading-relaxed text-white/95">
+            El cosmos aguarda. Toca el cristal o escríbeme para sincronizar tu progreso.
+          </p>
+        </div>
+        
+        <div class="flex gap-2">
+          <input type="text" id="chat-input" placeholder="Pregúntale a Aurora..." class="chip-glass flex-1 rounded-2xl px-5 text-sm font-medium placeholder-thinair/40 text-white outline-none focus:border-fluorescent transition-colors" />
+          <button onclick="sendChat()" class="w-12 h-12 rounded-2xl bg-fluorescent text-abyss flex items-center justify-center shadow-[0_0_20px_rgba(80,232,244,0.3)] haptic-active">
+            <i data-lucide="arrow-up" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: MATERIAS -->
+    <section id="tab-materias" class="tab-content hidden h-full flex flex-col px-6 overflow-y-auto pb-4 fade-up-enter">
+      <div class="flex justify-between items-end mb-6 pt-2">
+        <div>
+          <h2 class="font-display text-3xl font-bold text-white tracking-tight mb-1">Materias</h2>
+          <div class="flex items-center gap-2 group chip-glass rounded-full px-3 py-1 w-max">
+            <i data-lucide="calendar" class="w-3 h-3 text-thinair/50"></i>
+            <input type="text" id="input-semestre" value="2026-1" onblur="saveData()" class="bg-transparent border-none font-sans text-xs font-bold text-fluorescent focus:outline-none w-14 uppercase tracking-wider" />
+          </div>
+        </div>
+        <button onclick="openModal('modal-course')" class="w-12 h-12 glass-panel rounded-2xl flex items-center justify-center text-fluorescent shadow-[0_0_15px_rgba(80,232,244,0.1)] haptic-active">
+          <i data-lucide="plus" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <div id="empty-state" class="hidden flex-col items-center justify-center pt-16 pb-10 opacity-70">
+        <!-- SVG Ilustración Limpia (Hoja/Aurora en cristal) -->
+        <svg class="w-24 h-24 mb-6 text-thinair/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke-dasharray="2 4"/>
+          <path d="M12 22V12" stroke="#50E8F4" stroke-width="2"/>
+          <path d="M12 12c-2.5 0-5-2.5-5-5s2.5-2 5-2" stroke="#50E8F4" stroke-width="2"/>
+          <path d="M12 12c2.5 0 5-2.5 5-5s-2.5-2-5-2" stroke="#50E8F4" stroke-width="2"/>
+        </svg>
+        <p class="font-sans text-sm font-medium text-center text-thinair/80">El semestre es un lienzo en blanco.<br>Añade tu primera materia.</p>
+      </div>
+
+      <div id="courses-list" class="space-y-3 pb-8"></div>
+    </section>
+
+    <!-- TAB 3: ANÁLISIS -->
+    <section id="tab-analisis" class="tab-content hidden h-full px-6 overflow-y-auto pb-8 fade-up-enter">
+      <div class="pt-2 mb-6">
+        <h2 class="font-display text-3xl font-bold text-white tracking-tight">Análisis</h2>
+        <p class="font-sans text-xs font-medium text-thinair/60 mt-1 uppercase tracking-widest">Rendimiento Global</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <!-- PAPA Principal -->
+        <div class="glass-panel p-6 rounded-[2rem] flex flex-col justify-center items-center text-center col-span-2 relative">
+          <span class="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-thinair/50 mb-4">Promedio Proyectado</span>
+          
+          <div class="relative w-36 h-36 flex items-center justify-center mb-2">
+            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="5" />
+              <circle id="ring-svg" class="progress-ring" cx="50" cy="50" r="44" fill="none" stroke="#50E8F4" stroke-width="5" stroke-dasharray="276" stroke-dashoffset="276" stroke-linecap="round" />
+            </svg>
+            <div id="analisis-papa" class="font-display text-5xl font-bold text-white tracking-tighter">0.0</div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-5 rounded-3xl text-center border-t border-auroragreen/40 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-2"><i data-lucide="check-circle" class="w-4 h-4 text-auroragreen/40"></i></div>
+          <div class="font-display text-3xl font-bold text-auroragreen mb-1" id="stat-pass">0</div>
+          <div class="font-sans text-[9px] text-thinair/70 uppercase font-bold tracking-widest">Aprobadas</div>
+        </div>
+
+        <div class="glass-panel p-5 rounded-3xl text-center border-t border-[#FF8A8A]/40 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-[#FF8A8A]/40"></i></div>
+          <div class="font-display text-3xl font-bold text-[#FF8A8A] mb-1" id="stat-fail">0</div>
+          <div class="font-sans text-[9px] text-thinair/70 uppercase font-bold tracking-widest">En Riesgo</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- LIQUID GLASS NAVBAR -->
+  <nav class="fixed bottom-[var(--sab)] left-6 right-6 z-50 max-w-sm mx-auto">
+    <div class="pill-nav p-1.5 flex justify-between items-center relative">
+      <div id="nav-indicator" class="nav-indicator"></div>
+      
+      <button onclick="switchTab('inicio', 0)" class="relative z-10 flex-1 flex flex-col items-center py-2.5 text-fluorescent haptic-active">
+        <i data-lucide="orbit" class="w-6 h-6 mb-1 transition-transform" id="icon-inicio"></i>
+        <span class="font-display text-[9px] font-bold tracking-widest uppercase">Orbe</span>
+      </button>
+      
+      <button onclick="switchTab('materias', 1)" class="relative z-10 flex-1 flex flex-col items-center py-2.5 text-thinair/50 haptic-active">
+        <i data-lucide="book-open" class="w-5 h-5 mb-1 transition-transform" id="icon-materias"></i>
+        <span class="font-display text-[9px] font-bold tracking-widest uppercase">Materias</span>
+      </button>
+      
+      <button onclick="switchTab('analisis', 2)" class="relative z-10 flex-1 flex flex-col items-center py-2.5 text-thinair/50 haptic-active">
+        <i data-lucide="bar-chart-3" class="w-5 h-5 mb-1 transition-transform" id="icon-analisis"></i>
+        <span class="font-display text-[9px] font-bold tracking-widest uppercase">Análisis</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MODAL: ADD COURSE -->
+  <div id="modal-course" class="fixed inset-0 z-[100] hidden flex-col items-center justify-center p-6 bg-abyss/90 backdrop-blur-xl opacity-0 transition-opacity duration-400">
+    <div class="glass-panel w-full max-w-sm rounded-[2rem] p-6 transition-transform duration-400 scale-95" id="mc-content">
+      <h3 class="font-display text-2xl font-bold text-white mb-6">Nueva Materia</h3>
+      <input type="text" id="inp-c-name" placeholder="Concepto (ej. Física)" class="w-full chip-glass rounded-xl px-4 py-3.5 mb-3 text-sm text-white outline-none focus:border-fluorescent" />
+      <input type="number" id="inp-c-cred" placeholder="Créditos (ej. 3)" class="w-full chip-glass rounded-xl px-4 py-3.5 mb-6 text-sm text-white outline-none focus:border-fluorescent" />
+      <div class="flex gap-3">
+        <button onclick="closeModal('modal-course')" class="flex-1 py-3.5 rounded-xl font-bold text-sm text-thinair/60 hover:bg-white/10 haptic-active">Cancelar</button>
+        <button onclick="addCourse()" class="flex-1 py-3.5 rounded-xl font-bold text-sm text-abyss bg-fluorescent shadow-[0_0_15px_rgba(80,232,244,0.4)] haptic-active">Añadir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: COURSE DETAILS -->
+  <div id="modal-details" class="fixed inset-0 z-[90] hidden flex-col bg-abyss opacity-0 transition-opacity duration-400">
+    <header class="px-6 pt-[calc(var(--sat)+10px)] pb-4 flex items-center justify-between border-b border-white/5 bg-void/80 backdrop-blur-xl">
+      <button onclick="closeModal('modal-details')" class="text-thinair/60 hover:text-white p-2 -ml-2 haptic-active">
+        <i data-lucide="chevron-left" class="w-7 h-7"></i>
+      </button>
+      <h3 id="det-name" class="font-display text-lg font-bold text-white truncate">Materia</h3>
+      <button onclick="deleteCourse()" class="p-2 -mr-2 text-red-400/70 hover:text-red-400 haptic-active"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+    </header>
+    
+    <div class="flex-1 overflow-y-auto px-6 pt-6 pb-[calc(var(--sab)+30px)]">
+      <div class="glass-panel p-6 rounded-[2rem] text-center mb-8 relative">
+        <p class="font-sans text-[10px] font-bold text-thinair/50 uppercase tracking-widest">Nota Acumulada</p>
+        <p id="det-grade" class="font-display text-5xl font-bold mt-2 mb-1 tracking-tighter text-white">0.0</p>
+        <p id="det-perc" class="font-sans text-[11px] font-medium text-thinair/60 uppercase">0% Evaluado</p>
+        <div id="det-msg" class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-abyss border border-white/10 px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest text-fluorescent shadow-lg whitespace-nowrap">
+          Activa
+        </div>
+      </div>
+      
+      <div class="flex justify-between items-end mb-4">
+        <h4 class="font-display text-xl font-bold text-white">Evaluaciones</h4>
+        <button onclick="openModal('modal-grade')" class="text-fluorescent text-sm font-bold bg-fluorescent/10 px-4 py-1.5 rounded-full haptic-active">+ Nota</button>
+      </div>
+      <div id="grades-list" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD GRADE -->
+  <div id="modal-grade" class="fixed inset-0 z-[100] hidden flex-col items-center justify-center p-6 bg-abyss/90 backdrop-blur-xl opacity-0 transition-opacity duration-400">
+    <div class="glass-panel w-full max-w-sm rounded-[2rem] p-6 transition-transform duration-400 scale-95" id="mg-content">
+      <h3 class="font-display text-2xl font-bold text-white mb-6">Nueva Nota</h3>
+      <input type="text" id="inp-g-name" placeholder="Concepto (ej. Parcial)" class="w-full chip-glass rounded-xl px-4 py-3.5 mb-3 text-sm text-white outline-none focus:border-fluorescent" />
+      <div class="flex gap-3 mb-6">
+        <input type="number" id="inp-g-val" placeholder="Nota (0-5)" step="0.1" class="w-1/2 chip-glass rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-fluorescent" />
+        <input type="number" id="inp-g-weight" placeholder="Peso (%)" class="w-1/2 chip-glass rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-fluorescent" />
+      </div>
+      <div class="flex gap-3">
+        <button onclick="closeModal('modal-grade')" class="flex-1 py-3.5 rounded-xl font-bold text-sm text-thinair/60 hover:bg-white/10 haptic-active">Cancelar</button>
+        <button onclick="addGrade()" class="flex-1 py-3.5 rounded-xl font-bold text-sm text-abyss bg-fluorescent shadow-[0_0_15px_rgba(80,232,244,0.4)] haptic-active">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    
+    const haptic = () => { if(navigator.vibrate) navigator.vibrate(40); };
+    document.querySelectorAll('.haptic-active').forEach(b => b.addEventListener('click', haptic));
+
+    /* --- ESTADO GLOBAL Y LÓGICA DE DATOS --- */
+    let data = { semestre: "2026-1", courses: [] };
+    let curCourse = null;
+
+    function save() { localStorage.setItem('brote_app', JSON.stringify(data)); }
+    function load() {
+      const s = localStorage.getItem('brote_app');
+      if (s) data = JSON.parse(s);
+      document.getElementById('input-semestre').value = data.semestre || "2026-1";
+      renderApp();
+    }
+
+    function calcCourse(c) {
+      let acc = 0, p = 0;
+      c.grades.forEach(g => { acc += g.val * (g.weight/100); p += g.weight; });
+      let current = p > 0 ? (acc / (p/100)) : 0;
+      let status = 'active', msg = 'Activa';
+      
+      if (p === 100) { status = acc >= 3 ? 'pass' : 'fail'; msg = status==='pass'?'Aprobada':'Reprobada'; }
+      else if (p > 0) {
+        let req = (3.0 - acc) / ((100 - p)/100);
+        if (req <= 0) { msg = 'Aprobada asegurada'; status = 'pass'; }
+        else if (req > 5) { msg = 'En riesgo grave'; status = 'fail'; }
+        else msg = `Requiere ${req.toFixed(1)} en ${100-p}%`;
+      }
+      return { acc, current, p, status, msg };
+    }
+
+    /* --- RENDERIZADO UI --- */
+    function renderApp() {
+      const cList = document.getElementById('courses-list');
+      const eState = document.getElementById('empty-state');
+      cList.innerHTML = '';
+      
+      let totC = 0, sumP = 0, pass = 0, fail = 0;
+
+      if (data.courses.length === 0) {
+        eState.style.display = 'flex';
+        setOrbEmotion('reposo');
+      } else {
+        eState.style.display = 'none';
+        data.courses.forEach(c => {
+          const stats = calcCourse(c);
+          if (stats.p > 0) { totC += c.credits; sumP += stats.current * c.credits; }
+          if (stats.p === 100 && stats.status === 'pass') pass++;
+          if (stats.p > 0 && stats.status === 'fail') fail++;
+          
+          let color = 'text-white', border = 'border-white/5';
+          if (stats.status === 'pass' && stats.p === 100) { color = 'text-auroragreen'; border = 'border-auroragreen/30'; }
+          if (stats.status === 'fail' && (stats.p === 100 || stats.msg.includes('riesgo'))) { color = 'text-[#FF8A8A]'; border = 'border-[#FF8A8A]/30'; }
+
+          cList.innerHTML += `
+            <div class="glass-panel p-5 rounded-2xl haptic-active flex justify-between items-center border-t ${border}" onclick="openDet('${c.id}')">
+              <div>
+                <h4 class="font-display font-bold text-lg text-white mb-0.5">${c.name}</h4>
+                <div class="flex gap-2 items-center">
+                  <span class="text-[9px] uppercase font-bold bg-white/10 px-2 py-0.5 rounded text-thinair">${c.credits} CR</span>
+                  <span class="text-[10px] text-thinair/60 font-medium">${stats.p}% evaluado</span>
+                </div>
+              </div>
+              <div class="font-display text-3xl font-bold ${color}">${stats.acc.toFixed(1)}</div>
+            </div>`;
+        });
+      }
+
+      // Analisis y Header
+      const papa = totC > 0 ? (sumP / totC) : 0;
+      animVal("analisis-papa", papa);
+      animVal("header-papa", papa);
+      document.getElementById('stat-pass').innerText = pass;
+      document.getElementById('stat-fail').innerText = fail;
+
+      // Colores PAPA
+      let mainColor = '#50E8F4';
+      if(papa > 0) {
+        if(papa >= 3.5) mainColor = '#5CF2A0';
+        else if (papa < 3.0) mainColor = '#FF8A8A';
+      }
+      
+      const ring = document.getElementById('ring-svg');
+      ring.style.strokeDashoffset = 276 - (papa/5)*276;
+      ring.style.stroke = mainColor;
+      
+      document.getElementById('header-dot').style.backgroundColor = mainColor;
+      document.getElementById('header-dot').style.boxShadow = `0 0 8px ${mainColor}`;
+
+      // Update Orb Emotion based on stats
+      if(data.courses.length > 0) {
+        if(papa >= 4.0) setOrbEmotion('feliz');
+        else if (papa < 3.0 && papa > 0) setOrbEmotion('triste');
+        else setOrbEmotion('reposo');
+      }
+    }
+
+    function openDet(id) {
+      curCourse = data.courses.find(c => c.id === id);
+      const st = calcCourse(curCourse);
+      document.getElementById('det-name').innerText = curCourse.name;
+      document.getElementById('det-grade').innerText = st.acc.toFixed(1);
+      document.getElementById('det-perc').innerText = `${st.p}% Evaluado`;
+      document.getElementById('det-msg').innerText = st.msg;
+      
+      const gl = document.getElementById('grades-list');
+      gl.innerHTML = '';
+      curCourse.grades.forEach((g, i) => {
+        gl.innerHTML += `
+          <div class="glass-panel p-4 rounded-xl flex justify-between items-center">
+            <div>
+              <h5 class="font-display font-bold text-sm text-white">${g.name}</h5>
+              <span class="text-[9px] text-thinair/60 uppercase tracking-widest">${g.weight}%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="font-display text-xl font-bold text-white">${g.val.toFixed(1)}</span>
+              <button onclick="delGrade(${i})" class="text-red-400/50 hover:text-red-400 haptic-active"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+          </div>`;
+      });
+      lucide.createIcons();
+      openModal('modal-details');
+    }
+
+    /* --- CRUD ACTIONS --- */
+    function addCourse() {
+      const n = document.getElementById('inp-c-name').value;
+      const c = parseFloat(document.getElementById('inp-c-cred').value);
+      if(!n || isNaN(c)) return;
+      data.courses.push({ id: Date.now().toString(), name: n, credits: c, grades: [] });
+      save(); renderApp(); closeModal('modal-course');
+      document.getElementById('inp-c-name').value=''; document.getElementById('inp-c-cred').value='';
+    }
+    function addGrade() {
+      const n = document.getElementById('inp-g-name').value;
+      const v = parseFloat(document.getElementById('inp-g-val').value);
+      const w = parseFloat(document.getElementById('inp-g-weight').value);
+      if(!n || isNaN(v) || isNaN(w)) return;
+      curCourse.grades.push({ name: n, val: v, weight: w });
+      save(); renderApp(); closeModal('modal-grade'); openDet(curCourse.id);
+      document.getElementById('inp-g-name').value=''; document.getElementById('inp-g-val').value=''; document.getElementById('inp-g-weight').value='';
+    }
+    function delGrade(i) { curCourse.grades.splice(i, 1); save(); renderApp(); openDet(curCourse.id); }
+    function deleteCourse() { 
+      data.courses = data.courses.filter(c => c.id !== curCourse.id); 
+      save(); renderApp(); closeModal('modal-details'); 
+    }
+
+    /* --- NAVEGACIÓN --- */
+    function switchTab(t, idx) {
+      document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
+      const active = document.getElementById(`tab-${t}`);
+      active.classList.remove('hidden');
+      active.classList.remove('fade-up-enter'); void active.offsetWidth; active.classList.add('fade-up-enter');
+
+      document.getElementById('nav-indicator').style.transform = `translateX(${idx * 100}%)`;
+      
+      ['inicio','materias','analisis'].forEach(id => {
+        const isAct = id === t;
+        const icon = document.getElementById(`icon-${id}`);
+        icon.classList.toggle('text-fluorescent', isAct);
+        icon.classList.toggle('text-thinair/50', !isAct);
+        icon.classList.toggle('w-6', isAct); icon.classList.toggle('h-6', isAct);
+        icon.classList.toggle('w-5', !isAct); icon.classList.toggle('h-5', !isAct);
+      });
+    }
+
+    function openModal(id) {
+      const m = document.getElementById(id);
+      m.classList.remove('hidden'); m.classList.add('flex');
+      void m.offsetWidth; m.classList.remove('opacity-0');
+      m.querySelector('.scale-95')?.classList.replace('scale-95', 'scale-100');
+    }
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      m.classList.add('opacity-0');
+      m.querySelector('.scale-100')?.classList.replace('scale-100', 'scale-95');
+      setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 400);
+    }
+
+    function animVal(id, end) {
+      const el = document.getElementById(id);
+      const start = parseFloat(el.innerText) || 0;
+      const duration = 800; let st = null;
+      const step = (t) => {
+        if(!st) st = t;
+        const prog = Math.min((t - st)/duration, 1);
+        el.innerText = (start + (end-start)*prog).toFixed(1);
+        if(prog < 1) requestAnimationFrame(step);
+      }; requestAnimationFrame(step);
+    }
+
+    /* --- SISTEMA DEL ORBE Y OJOS --- */
+    let currentEmotion = 'reposo';
+    let blinkInterval;
+
+    function setOrbEmotion(emo) {
+      const eyes = document.getElementById('orb-eyes');
+      eyes.className = `eyes-container eyes-${emo}`;
+      currentEmotion = emo;
+    }
+
+    // Parpadeo natural
+    function triggerBlink() {
+      const eyes = document.getElementById('orb-eyes');
+      if(currentEmotion !== 'hablando' && currentEmotion !== 'loca') {
+        eyes.classList.add('blink');
+        setTimeout(() => eyes.classList.remove('blink'), 150);
+      }
+      clearInterval(blinkInterval);
+      blinkInterval = setInterval(triggerBlink, 3000 + Math.random() * 4000);
+    }
+    
+    // Eye Tracking (Subtle)
+    const orbHitbox = document.getElementById('orb-hitbox');
+    const eyeCont = document.getElementById('orb-eyes');
+    
+    function trackEyes(e) {
+      if(!eyeCont) return;
+      const rect = orbHitbox.getBoundingClientRect();
+      const x = (e.clientX || (e.touches && e.touches[0].clientX)) - (rect.left + rect.width/2);
+      const y = (e.clientY || (e.touches && e.touches[0].clientY)) - (rect.top + rect.height/2);
+      
+      const moveX = Math.max(-12, Math.min(12, x * 0.05));
+      const moveY = Math.max(-12, Math.min(12, y * 0.05));
+      
+      eyeCont.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
+    }
+    
+    window.addEventListener('mousemove', trackEyes);
+    window.addEventListener('touchmove', trackEyes);
+
+    /* --- VOZ Y DIÁLOGO --- */
+    let audioUnlocked = false;
+    document.body.addEventListener('touchstart', () => {
+      if(!audioUnlocked) {
+        const u = new SpeechSynthesisUtterance(''); u.volume = 0; speechSynthesis.speak(u);
+        audioUnlocked = true;
+      }
+    }, {once:true});
+
+    function interactWithOrb() {
+      setOrbEmotion('pensando');
+      setTimeout(() => {
+        let msg = "No hay datos suficientes en el cosmos.";
+        let tot=0, w=0;
+        data.courses.forEach(c => { const st=calcCourse(c); if(st.p>0){ tot+=c.credits; w+=st.current*c.credits;} });
+        if(data.courses.length>0) {
+          const p = tot>0?(w/tot):0;
+          msg = `Tienes ${data.courses.length} materias. Tu promedio proyectado es ${p.toFixed(1)}. `;
+          if(p>=4.0) msg += "Brillante, sigue así.";
+          else if(p>=3.0) msg += "Estabilidad detectada, pero puedes mejorar.";
+          else msg += "Alerta, el sistema requiere atención inmediata.";
+        }
+        
+        document.getElementById('orb-message').innerText = msg;
+        speak(msg);
+      }, 400);
+    }
+    
+    function sendChat() {
+      const inp = document.getElementById('chat-input');
+      if(inp.value.trim() !== '') {
+        inp.value = '';
+        interactWithOrb();
+      }
+    }
+
+    function speak(txt) {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'es-CO'; u.rate = 1.05;
+      
+      const v = speechSynthesis.getVoices().filter(v=>v.lang.startsWith('es'));
+      const f = v.find(v=>v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('mujer'));
+      if(f) u.voice = f; else if(v.length>0) u.voice = v[0];
+
+      u.onstart = () => setOrbEmotion('hablando');
+      u.onend = () => renderApp(); // Reverts to appropriate emotion based on PAPA
+      
+      speechSynthesis.speak(u);
+    }
+
+    /* --- INICIO (SPLASH) --- */
+    window.onload = () => {
+      setTimeout(() => {
+        // Despierta
+        document.getElementById('splash-eyes').classList.replace('eyes-reposo', 'eyes-sorprendida');
+        setTimeout(() => {
+          const s = document.getElementById('splash');
+          s.style.opacity = '0';
+          setTimeout(() => s.style.display = 'none', 800);
+          
+          load();
+          triggerBlink();
+          switchTab('inicio', 0);
+        }, 800);
+      }, 600);
+    };
+  </script>
+</body>
+</html>
