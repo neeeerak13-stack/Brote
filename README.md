@@ -110,3 +110,8 @@ Esto se hace una sola vez. Es gratis.
 - `capacitor.config.json`: nombre e identificador de la app (`com.broteapp.estudio`).
 - `scripts/prepare-web.py` prepara todos los archivos web; `scripts/patch-android.py` agrega el enlace de regreso de Google y los permisos de voz. El APK generado por este flujo usa la firma debug estándar de Android.
 - La clave de firma original no viene incluida. El APK de prueba se firma con la clave debug que genera Android; para actualizar encima de una instalación anterior sin perder datos, necesitas recuperar y configurar la clave privada original. Si no la tienes, exporta primero tus datos y tendrás que desinstalar la versión anterior antes de instalar el nuevo APK.
+
+
+### Firma del APK de prueba
+
+GitHub Actions compila `assembleDebug` con la clave debug estándar de Android. No requiere `brote.keystore` ni secretos de firma. Esto evita errores por contraseñas de keystore desconocidas. **Importante:** si ya distribuiste una versión firmada con otra clave, este APK no podrá instalarse como actualización sobre aquella; Android exige la misma clave para actualizar. Para publicar actualizaciones compatibles hay que recuperar la clave original y sus contraseñas correctas.

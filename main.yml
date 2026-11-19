@@ -58,6 +58,13 @@ jobs:
         run: python3 scripts/patch-android.py
         env:
           BUILD_NUMBER: ${{ github.run_number }}
+      - name: Verificar firma debug sin keystore privado
+        run: |
+          if grep -R -n -E 'brote\.keystore|AURORA_KEYSTORE_PASSWORD|signingConfig[[:space:]]+signingConfigs\.' android/app/build.gradle android/app/*.gradle 2>/dev/null; then
+            echo "ERROR: se detectó una firma personalizada que puede usar una contraseña incorrecta."
+            exit 1
+          fi
+          echo "Correcto: el APK debug usará la firma estándar de Android."
       - name: Sincronizar aplicación
         run: npx cap sync android
       - name: Compilar APK
