@@ -1,4 +1,4 @@
-name: Construir Aurora
+name: Construir Brote
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: aurora-build
+  group: brote-build
   cancel-in-progress: true
 
 env:
@@ -24,68 +24,65 @@ jobs:
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
-
-      - name: Configurar la dirección de la página y el Client ID
-        run: |
-          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
-          REPO="${GITHUB_REPOSITORY#*/}"
-          printf 'window.AURORA_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
-          cat docs/config.js
-
-      - name: Instalar Node
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Instalar Java 17
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
-
+          java-version: '17'
+          cache: gradle
+      - name: Preparar archivos web
+        run: python3 scripts/prepare-web.py
+      - name: Configurar Client ID de Google
+        shell: bash
+        run: |
+          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
       - name: Instalar dependencias
         run: npm install --no-audit --no-fund
-
-      - name: Ejecutar pruebas académicas
+      - name: Ejecutar pruebas automatizadas
         run: npm test
-
-      - name: Crear el proyecto Android
+      - name: Validar JavaScript
+        run: |
+          for f in docs/js/*.js; do node --check "$f"; done
+      - name: Crear proyecto Android
         run: npx cap add android
-
-      - name: Generar íconos y pantalla de inicio
+      - name: Generar recursos Android
         run: npx capacitor-assets generate --android
         continue-on-error: true
-
-      - name: Ajustar enlace de Google, firma y versión
+      - name: Configurar Android
         run: python3 scripts/patch-android.py
         env:
           BUILD_NUMBER: ${{ github.run_number }}
-
-      - name: Copiar la app al proyecto
+      - name: Sincronizar aplicación
         run: npx cap sync android
-
-      - name: Compilar el APK
+      - name: Compilar APK
         working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - name: Verificar APK generado
         run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Preparar el archivo
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Aurora.apk
-
-      - name: Guardar el APK como artefacto
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/Brote.apk
+          sha256sum dist/Brote.apk
+      - name: Guardar APK como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: Aurora-apk
-          path: Aurora.apk
-
-      - name: Publicar el APK en Releases
+          name: Brote-apk
+          path: dist/Brote.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publicar APK en Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
-          name: Aurora ${{ github.run_number }}
-          body: "Descarga Aurora.apk e instálalo en tu celular Android."
-          files: Aurora.apk
+          name: Brote ${{ github.run_number }}
+          body: 'APK de prueba de Brote/Aurora. Para actualizar una instalación existente se requiere la misma clave de firma.'
+          files: dist/Brote.apk
           make_latest: true
 
   pages:
@@ -97,21 +94,20 @@ jobs:
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
-
-      - name: Configurar la dirección de la página y el Client ID
+      - name: Preparar archivos web
+        run: python3 scripts/prepare-web.py
+      - name: Configurar Client ID de Google
+        shell: bash
         run: |
           OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           REPO="${GITHUB_REPOSITORY#*/}"
-          printf 'window.AURORA_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
-
+          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
       - name: Preparar Pages
         uses: actions/configure-pages@v5
-
-      - name: Subir la página
+      - name: Subir página
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
-
       - name: Publicar
         id: deploy
         uses: actions/deploy-pages@v4

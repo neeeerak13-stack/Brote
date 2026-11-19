@@ -1,0 +1,113 @@
+name: Construir Brote
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: brote-build
+  cancel-in-progress: true
+
+env:
+  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+
+jobs:
+  apk:
+    name: Crear el APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Preparar archivos web
+        run: python3 scripts/prepare-web.py
+      - name: Configurar Client ID de Google
+        shell: bash
+        run: |
+          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+      - name: Ejecutar pruebas automatizadas
+        run: npm test
+      - name: Validar JavaScript
+        run: |
+          for f in docs/js/*.js; do node --check "$f"; done
+      - name: Crear proyecto Android
+        run: npx cap add android
+      - name: Generar recursos Android
+        run: npx capacitor-assets generate --android
+        continue-on-error: true
+      - name: Configurar Android
+        run: python3 scripts/patch-android.py
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+      - name: Sincronizar aplicación
+        run: npx cap sync android
+      - name: Compilar APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - name: Verificar APK generado
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/Brote.apk
+          sha256sum dist/Brote.apk
+      - name: Guardar APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: Brote-apk
+          path: dist/Brote.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publicar APK en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: Brote ${{ github.run_number }}
+          body: 'APK de prueba de Brote/Aurora. Para actualizar una instalación existente se requiere la misma clave de firma.'
+          files: dist/Brote.apk
+          make_latest: true
+
+  pages:
+    name: Publicar la página web
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+      - name: Preparar archivos web
+        run: python3 scripts/prepare-web.py
+      - name: Configurar Client ID de Google
+        shell: bash
+        run: |
+          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+      - name: Preparar Pages
+        uses: actions/configure-pages@v5
+      - name: Subir página
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Publicar
+        id: deploy
+        uses: actions/deploy-pages@v4

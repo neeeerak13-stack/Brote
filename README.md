@@ -44,12 +44,13 @@ Aurora habla con voz de mujer **suave, cálida, amable y delicada, con emoción*
 5. Toca **Create repository**.
 
 ### 2. Sube los archivos
-1. Descomprime el ZIP que te di.
+1. Descomprime el ZIP.
 2. En tu repositorio toca **Add file › Upload files**.
-3. Arrastra **todo el contenido de la carpeta** (las carpetas `docs`, `assets`, `scripts`, `tests`, `design-reference`, `.github` y los archivos `package.json`, `capacitor.config.json`, `README.md`, `.gitignore`).
-4. Abajo toca **Commit changes**.
+3. Sube **todo el contenido de la carpeta `Brote-main`**, incluida la carpeta oculta `.github` y las carpetas `scripts` y `tests`.
+4. No muevas manualmente archivos a `docs`: el flujo de GitHub prepara esa carpeta y copia los módulos JavaScript y CSS necesarios para que Orbe funcione en Android y en la web.
+5. Toca **Commit changes**.
 
-> **Si la carpeta oculta `.github` no se sube** (pasa en algunos computadores): en el repositorio toca **Add file › Create new file**, escribe como nombre `.github/workflows/build.yml` (al escribir `/` se crean las carpetas), pega ahí el contenido del archivo `build.yml` que viene en el ZIP y toca **Commit changes**.
+> Es importante que `.github/workflows/main.yml` quede exactamente en esa ruta. Si GitHub móvil no permite subir la carpeta oculta, crea ese archivo desde **Add file › Create new file** y pega el contenido de `build.yml`.
 
 ### 3. Activa la página web (una sola vez)
 1. En el repositorio entra a **Settings › Pages**.
@@ -107,5 +108,5 @@ Esto se hace una sola vez. Es gratis.
 ## Para quien edite el código
 - La app completa está en `docs/index.html` (un solo archivo).
 - `capacitor.config.json`: nombre e identificador de la app (`com.broteapp.estudio`).
-- `scripts/patch-android.py`: agrega el enlace de regreso de Google y la firma fija.
+- `scripts/prepare-web.py` prepara todos los archivos web; `scripts/patch-android.py` agrega el enlace de regreso de Google y los permisos de voz. El APK generado por este flujo usa la firma debug estándar de Android.
 - La clave de firma original no viene incluida. El APK de prueba se firma con la clave debug que genera Android; para actualizar encima de una instalación anterior sin perder datos, necesitas recuperar y configurar la clave privada original. Si no la tienes, exporta primero tus datos y tendrás que desinstalar la versión anterior antes de instalar el nuevo APK.

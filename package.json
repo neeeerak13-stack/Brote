@@ -15,6 +15,6 @@
   },
   "scripts": {
     "test": "node tests/aurora-legacy-bridge.test.js && node tests/aurora-integration.test.js && node tests/aurora-ui-academic.test.js && node tests/aurora-orbe-integration.test.js && node tests/aurora-orbe-assistant.test.js",
-    "test:ui": "node tests/ui-integration.playwright.js"
+    "test:ui": "node ui-integration.playwright.js"
   }
 }
