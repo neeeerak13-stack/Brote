@@ -1,0 +1,188 @@
+name: Construir Brote
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: brote-build
+  cancel-in-progress: true
+
+env:
+  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+
+jobs:
+  apk:
+    name: Crear el APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar todos los archivos web de Brote y Orbe
+        run: |
+          set -euo pipefail
+          mkdir -p docs/css docs/js assets scripts
+
+          # Páginas y recursos compartidos por la app Android y GitHub Pages.
+          for f in index.html orbe.html oauth.html manifest.webmanifest sw.js icon-192.png icon-512.png logo-unal.png; do
+            test -s "$f" || { echo "Falta archivo requerido: $f"; exit 1; }
+            cp "$f" docs/
+          done
+
+          # Orbe carga su hoja de estilos desde css/aurora-ui.css.
+          test -s aurora-ui.css || { echo "Falta aurora-ui.css"; exit 1; }
+          cp aurora-ui.css docs/css/aurora-ui.css
+
+          # Las dos pantallas cargan los módulos desde js/.
+          for f in aurora-academic-core.js aurora-academic-adapter.js aurora-academic-services.js aurora-history-import.js aurora-legacy-bridge.js aurora-orbe-assistant.js aurora-orbe-ui.js; do
+            test -s "$f" || { echo "Falta módulo requerido: $f"; exit 1; }
+            cp "$f" docs/js/
+          done
+
+          # Recursos de marca usados por el generador de iconos Android.
+          for f in icon-only.png icon-foreground.png icon-background.png splash.png; do
+            if [ -s "$f" ]; then cp "$f" assets/; fi
+          done
+          test -s patch-android.py || { echo "Falta patch-android.py"; exit 1; }
+          cp patch-android.py scripts/patch-android.py
+
+          # Bloqueo preventivo: no continuar si Orbe o una dependencia no está empaquetada.
+          test -s docs/orbe.html
+          test -s docs/css/aurora-ui.css
+          test -s docs/js/aurora-orbe-ui.js
+          test -s docs/js/aurora-orbe-assistant.js
+          test -s docs/js/aurora-academic-core.js
+          echo "Contenido web listo para Capacitor y GitHub Pages:"
+          find docs -maxdepth 2 -type f -print | sort
+
+      - name: Configurar la dirección de la página y el Client ID
+        run: |
+          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+          cat docs/config.js
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Crear el proyecto Android
+        run: npx cap add android
+
+      - name: Generar íconos y pantalla de inicio
+        run: npx capacitor-assets generate --android
+        continue-on-error: true
+
+      - name: Ajustar enlace de Google, firma y versión
+        run: python3 scripts/patch-android.py
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: Copiar la app al proyecto
+        run: npx cap sync android
+
+      - name: Compilar el APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Preparar el archivo
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Brote.apk
+
+      - name: Guardar el APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: Brote-apk
+          path: Brote.apk
+
+      - name: Publicar el APK en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: Brote ${{ github.run_number }}
+          body: "Descarga Brote.apk e instálalo en tu celular Android."
+          files: Brote.apk
+          make_latest: true
+
+  pages:
+    name: Publicar la página web
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar todos los archivos web de Brote y Orbe
+        run: |
+          set -euo pipefail
+          mkdir -p docs/css docs/js assets scripts
+
+          # Páginas y recursos compartidos por la app Android y GitHub Pages.
+          for f in index.html orbe.html oauth.html manifest.webmanifest sw.js icon-192.png icon-512.png logo-unal.png; do
+            test -s "$f" || { echo "Falta archivo requerido: $f"; exit 1; }
+            cp "$f" docs/
+          done
+
+          # Orbe carga su hoja de estilos desde css/aurora-ui.css.
+          test -s aurora-ui.css || { echo "Falta aurora-ui.css"; exit 1; }
+          cp aurora-ui.css docs/css/aurora-ui.css
+
+          # Las dos pantallas cargan los módulos desde js/.
+          for f in aurora-academic-core.js aurora-academic-adapter.js aurora-academic-services.js aurora-history-import.js aurora-legacy-bridge.js aurora-orbe-assistant.js aurora-orbe-ui.js; do
+            test -s "$f" || { echo "Falta módulo requerido: $f"; exit 1; }
+            cp "$f" docs/js/
+          done
+
+          # Recursos de marca usados por el generador de iconos Android.
+          for f in icon-only.png icon-foreground.png icon-background.png splash.png; do
+            if [ -s "$f" ]; then cp "$f" assets/; fi
+          done
+          test -s patch-android.py || { echo "Falta patch-android.py"; exit 1; }
+          cp patch-android.py scripts/patch-android.py
+
+          # Bloqueo preventivo: no continuar si Orbe o una dependencia no está empaquetada.
+          test -s docs/orbe.html
+          test -s docs/css/aurora-ui.css
+          test -s docs/js/aurora-orbe-ui.js
+          test -s docs/js/aurora-orbe-assistant.js
+          test -s docs/js/aurora-academic-core.js
+          echo "Contenido web listo para Capacitor y GitHub Pages:"
+          find docs -maxdepth 2 -type f -print | sort
+
+      - name: Configurar la dirección de la página y el Client ID
+        run: |
+          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+
+      - name: Preparar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir la página
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Publicar
+        id: deploy
+        uses: actions/deploy-pages@v4
