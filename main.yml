@@ -25,42 +25,49 @@ jobs:
       - name: Descargar el código
         uses: actions/checkout@v4
 
-      - name: Preparar todos los archivos web de Brote y Orbe
+      - name: Preparar todos los recursos web de Aurora y Orbe
         run: |
           set -euo pipefail
-          mkdir -p docs/css docs/js assets scripts
+          mkdir -p docs/js docs/css assets scripts keystore
 
-          # Páginas y recursos compartidos por la app Android y GitHub Pages.
-          for f in index.html orbe.html oauth.html manifest.webmanifest sw.js icon-192.png icon-512.png logo-unal.png; do
-            test -s "$f" || { echo "Falta archivo requerido: $f"; exit 1; }
+          # Páginas que abre la aplicación. index.html redirige a orbe.html.
+          for f in index.html orbe.html oauth.html; do
+            test -f "$f" || { echo "Falta la página necesaria: $f"; exit 1; }
             cp "$f" docs/
           done
 
-          # Orbe carga su hoja de estilos desde css/aurora-ui.css.
-          test -s aurora-ui.css || { echo "Falta aurora-ui.css"; exit 1; }
+          # Recursos compartidos de la PWA.
+          for f in config.js manifest.webmanifest sw.js icon-192.png icon-512.png logo-unal.png; do
+            test -f "$f" || { echo "Falta el recurso necesario: $f"; exit 1; }
+            cp "$f" docs/
+          done
+
+          # Estilos que usa orbe.html.
+          test -f aurora-ui.css || { echo "Falta aurora-ui.css"; exit 1; }
           cp aurora-ui.css docs/css/aurora-ui.css
 
-          # Las dos pantallas cargan los módulos desde js/.
+          # Todos los módulos JavaScript referenciados por index.html y orbe.html.
           for f in aurora-academic-core.js aurora-academic-adapter.js aurora-academic-services.js aurora-history-import.js aurora-legacy-bridge.js aurora-orbe-assistant.js aurora-orbe-ui.js; do
-            test -s "$f" || { echo "Falta módulo requerido: $f"; exit 1; }
+            test -f "$f" || { echo "Falta el módulo JavaScript: $f"; exit 1; }
             cp "$f" docs/js/
           done
 
-          # Recursos de marca usados por el generador de iconos Android.
+          # Recursos de generación de iconos y script de ajuste Android.
           for f in icon-only.png icon-foreground.png icon-background.png splash.png; do
-            if [ -s "$f" ]; then cp "$f" assets/; fi
+            test -f "$f" || { echo "Falta el recurso Android: $f"; exit 1; }
+            cp "$f" assets/
           done
-          test -s patch-android.py || { echo "Falta patch-android.py"; exit 1; }
-          cp patch-android.py scripts/patch-android.py
+          if [ -f patch-android.py ]; then mv patch-android.py scripts/patch-android.py; fi
+          if [ -f brote.keystore ]; then mv brote.keystore keystore/brote.keystore; fi
 
-          # Bloqueo preventivo: no continuar si Orbe o una dependencia no está empaquetada.
+          # Fallar aquí, y no producir un APK incompleto, si falta algo.
           test -s docs/orbe.html
           test -s docs/css/aurora-ui.css
+          test -s docs/logo-unal.png
           test -s docs/js/aurora-orbe-ui.js
           test -s docs/js/aurora-orbe-assistant.js
-          test -s docs/js/aurora-academic-core.js
-          echo "Contenido web listo para Capacitor y GitHub Pages:"
-          find docs -maxdepth 2 -type f -print | sort
+          echo "Recursos web preparados para Capacitor:"
+          find docs -maxdepth 3 -type f -print | sort
 
       - name: Configurar la dirección de la página y el Client ID
         run: |
@@ -132,42 +139,49 @@ jobs:
       - name: Descargar el código
         uses: actions/checkout@v4
 
-      - name: Preparar todos los archivos web de Brote y Orbe
+      - name: Preparar todos los recursos web de Aurora y Orbe
         run: |
           set -euo pipefail
-          mkdir -p docs/css docs/js assets scripts
+          mkdir -p docs/js docs/css assets scripts keystore
 
-          # Páginas y recursos compartidos por la app Android y GitHub Pages.
-          for f in index.html orbe.html oauth.html manifest.webmanifest sw.js icon-192.png icon-512.png logo-unal.png; do
-            test -s "$f" || { echo "Falta archivo requerido: $f"; exit 1; }
+          # Páginas que abre la aplicación. index.html redirige a orbe.html.
+          for f in index.html orbe.html oauth.html; do
+            test -f "$f" || { echo "Falta la página necesaria: $f"; exit 1; }
             cp "$f" docs/
           done
 
-          # Orbe carga su hoja de estilos desde css/aurora-ui.css.
-          test -s aurora-ui.css || { echo "Falta aurora-ui.css"; exit 1; }
+          # Recursos compartidos de la PWA.
+          for f in config.js manifest.webmanifest sw.js icon-192.png icon-512.png logo-unal.png; do
+            test -f "$f" || { echo "Falta el recurso necesario: $f"; exit 1; }
+            cp "$f" docs/
+          done
+
+          # Estilos que usa orbe.html.
+          test -f aurora-ui.css || { echo "Falta aurora-ui.css"; exit 1; }
           cp aurora-ui.css docs/css/aurora-ui.css
 
-          # Las dos pantallas cargan los módulos desde js/.
+          # Todos los módulos JavaScript referenciados por index.html y orbe.html.
           for f in aurora-academic-core.js aurora-academic-adapter.js aurora-academic-services.js aurora-history-import.js aurora-legacy-bridge.js aurora-orbe-assistant.js aurora-orbe-ui.js; do
-            test -s "$f" || { echo "Falta módulo requerido: $f"; exit 1; }
+            test -f "$f" || { echo "Falta el módulo JavaScript: $f"; exit 1; }
             cp "$f" docs/js/
           done
 
-          # Recursos de marca usados por el generador de iconos Android.
+          # Recursos de generación de iconos y script de ajuste Android.
           for f in icon-only.png icon-foreground.png icon-background.png splash.png; do
-            if [ -s "$f" ]; then cp "$f" assets/; fi
+            test -f "$f" || { echo "Falta el recurso Android: $f"; exit 1; }
+            cp "$f" assets/
           done
-          test -s patch-android.py || { echo "Falta patch-android.py"; exit 1; }
-          cp patch-android.py scripts/patch-android.py
+          if [ -f patch-android.py ]; then mv patch-android.py scripts/patch-android.py; fi
+          if [ -f brote.keystore ]; then mv brote.keystore keystore/brote.keystore; fi
 
-          # Bloqueo preventivo: no continuar si Orbe o una dependencia no está empaquetada.
+          # Fallar aquí, y no producir un APK incompleto, si falta algo.
           test -s docs/orbe.html
           test -s docs/css/aurora-ui.css
+          test -s docs/logo-unal.png
           test -s docs/js/aurora-orbe-ui.js
           test -s docs/js/aurora-orbe-assistant.js
-          test -s docs/js/aurora-academic-core.js
-          echo "Contenido web listo para Capacitor y GitHub Pages:"
-          find docs -maxdepth 2 -type f -print | sort
+          echo "Recursos web preparados para Capacitor:"
+          find docs -maxdepth 3 -type f -print | sort
 
       - name: Configurar la dirección de la página y el Client ID
         run: |
