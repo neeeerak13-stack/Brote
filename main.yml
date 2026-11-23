@@ -2,7 +2,7 @@ name: Construir Brote
 
 on:
   push:
-    branches: [main]
+    branches: [main, principal]
   workflow_dispatch:
 
 permissions:
@@ -25,58 +25,7 @@ jobs:
       - name: Descargar el código
         uses: actions/checkout@v4
 
-      - name: Preparar todos los recursos web de Aurora y Orbe
-        run: |
-          set -euo pipefail
-          mkdir -p docs/js docs/css assets scripts keystore
-
-          # Páginas que abre la aplicación. index.html redirige a orbe.html.
-          for f in index.html orbe.html oauth.html; do
-            test -f "$f" || { echo "Falta la página necesaria: $f"; exit 1; }
-            cp "$f" docs/
-          done
-
-          # Recursos compartidos de la PWA.
-          for f in config.js manifest.webmanifest sw.js icon-192.png icon-512.png logo-unal.png; do
-            test -f "$f" || { echo "Falta el recurso necesario: $f"; exit 1; }
-            cp "$f" docs/
-          done
-
-          # Estilos que usa orbe.html.
-          test -f aurora-ui.css || { echo "Falta aurora-ui.css"; exit 1; }
-          cp aurora-ui.css docs/css/aurora-ui.css
-
-          # Todos los módulos JavaScript referenciados por index.html y orbe.html.
-          for f in aurora-academic-core.js aurora-academic-adapter.js aurora-academic-services.js aurora-history-import.js aurora-legacy-bridge.js aurora-orbe-assistant.js aurora-orbe-ui.js; do
-            test -f "$f" || { echo "Falta el módulo JavaScript: $f"; exit 1; }
-            cp "$f" docs/js/
-          done
-
-          # Recursos de generación de iconos y script de ajuste Android.
-          for f in icon-only.png icon-foreground.png icon-background.png splash.png; do
-            test -f "$f" || { echo "Falta el recurso Android: $f"; exit 1; }
-            cp "$f" assets/
-          done
-          if [ -f patch-android.py ]; then mv patch-android.py scripts/patch-android.py; fi
-          if [ -f brote.keystore ]; then mv brote.keystore keystore/brote.keystore; fi
-
-          # Fallar aquí, y no producir un APK incompleto, si falta algo.
-          test -s docs/orbe.html
-          test -s docs/css/aurora-ui.css
-          test -s docs/logo-unal.png
-          test -s docs/js/aurora-orbe-ui.js
-          test -s docs/js/aurora-orbe-assistant.js
-          echo "Recursos web preparados para Capacitor:"
-          find docs -maxdepth 3 -type f -print | sort
-
-      - name: Configurar la dirección de la página y el Client ID
-        run: |
-          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
-          REPO="${GITHUB_REPOSITORY#*/}"
-          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
-          cat docs/config.js
-
-      - name: Instalar Node
+      - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -85,48 +34,91 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
+
+      - name: Preparar recursos web completos de Aurora y Orbe
+        run: python3 scripts/prepare-web.py
+
+      - name: Configurar Pages y Google Client ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+          test -s docs/config.js
 
       - name: Instalar dependencias
         run: npm install --no-audit --no-fund
 
-      - name: Crear el proyecto Android
+      - name: Ejecutar pruebas de regresión de Aurora y Orbe
+        run: npm test
+
+      - name: Validar sintaxis JavaScript empaquetado
+        run: |
+          set -euo pipefail
+          for f in docs/js/*.js; do node --check "$f"; done
+
+      - name: Crear proyecto Android
         run: npx cap add android
 
-      - name: Generar íconos y pantalla de inicio
+      - name: Generar iconos Android
         run: npx capacitor-assets generate --android
         continue-on-error: true
 
-      - name: Ajustar enlace de Google, firma y versión
+      - name: Ajustar OAuth, permisos, firma debug y versión
         run: python3 scripts/patch-android.py
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
-      - name: Copiar la app al proyecto
+      - name: Sincronizar recursos web con Android
         run: npx cap sync android
 
-      - name: Compilar el APK
-        working-directory: android
+      - name: Verificar recursos Orbe dentro de Android
         run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          set -euo pipefail
+          PUBLIC="android/app/src/main/assets/public"
+          test -s "$PUBLIC/index.html"
+          test -s "$PUBLIC/orbe.html"
+          test -s "$PUBLIC/css/aurora-ui.css"
+          test -s "$PUBLIC/logo-unal.png"
+          for f in aurora-academic-core.js aurora-academic-adapter.js aurora-academic-services.js aurora-history-import.js aurora-legacy-bridge.js aurora-orbe-assistant.js aurora-orbe-ui.js; do
+            test -s "$PUBLIC/js/$f"
+          done
+          echo "OK: HTML, CSS, logo y los 7 módulos de Orbe están empaquetados."
 
-      - name: Preparar el archivo
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Brote.apk
+      - name: Compilar APK debug
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
 
-      - name: Guardar el APK como artefacto
+      - name: Verificar APK y contenido de Orbe
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          unzip -l "$APK" | grep -q 'assets/public/orbe.html'
+          unzip -l "$APK" | grep -q 'assets/public/css/aurora-ui.css'
+          unzip -l "$APK" | grep -q 'assets/public/js/aurora-orbe-ui.js'
+          mkdir -p dist
+          cp "$APK" dist/Brote.apk
+          sha256sum dist/Brote.apk
+          ls -lh dist/Brote.apk
+
+      - name: Guardar APK descargable
         uses: actions/upload-artifact@v4
         with:
           name: Brote-apk
-          path: Brote.apk
+          path: dist/Brote.apk
+          if-no-files-found: error
+          retention-days: 30
 
-      - name: Publicar el APK en Releases
+      - name: Publicar APK en Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
           name: Brote ${{ github.run_number }}
-          body: "Descarga Brote.apk e instálalo en tu celular Android."
-          files: Brote.apk
+          body: 'APK debug de Brote/Aurora con recursos de Orbe comprobados.'
+          files: dist/Brote.apk
           make_latest: true
 
   pages:
@@ -139,64 +131,26 @@ jobs:
       - name: Descargar el código
         uses: actions/checkout@v4
 
-      - name: Preparar todos los recursos web de Aurora y Orbe
+      - name: Preparar recursos web completos
+        run: python3 scripts/prepare-web.py
+
+      - name: Configurar Pages y Google Client ID
+        shell: bash
         run: |
           set -euo pipefail
-          mkdir -p docs/js docs/css assets scripts keystore
-
-          # Páginas que abre la aplicación. index.html redirige a orbe.html.
-          for f in index.html orbe.html oauth.html; do
-            test -f "$f" || { echo "Falta la página necesaria: $f"; exit 1; }
-            cp "$f" docs/
-          done
-
-          # Recursos compartidos de la PWA.
-          for f in config.js manifest.webmanifest sw.js icon-192.png icon-512.png logo-unal.png; do
-            test -f "$f" || { echo "Falta el recurso necesario: $f"; exit 1; }
-            cp "$f" docs/
-          done
-
-          # Estilos que usa orbe.html.
-          test -f aurora-ui.css || { echo "Falta aurora-ui.css"; exit 1; }
-          cp aurora-ui.css docs/css/aurora-ui.css
-
-          # Todos los módulos JavaScript referenciados por index.html y orbe.html.
-          for f in aurora-academic-core.js aurora-academic-adapter.js aurora-academic-services.js aurora-history-import.js aurora-legacy-bridge.js aurora-orbe-assistant.js aurora-orbe-ui.js; do
-            test -f "$f" || { echo "Falta el módulo JavaScript: $f"; exit 1; }
-            cp "$f" docs/js/
-          done
-
-          # Recursos de generación de iconos y script de ajuste Android.
-          for f in icon-only.png icon-foreground.png icon-background.png splash.png; do
-            test -f "$f" || { echo "Falta el recurso Android: $f"; exit 1; }
-            cp "$f" assets/
-          done
-          if [ -f patch-android.py ]; then mv patch-android.py scripts/patch-android.py; fi
-          if [ -f brote.keystore ]; then mv brote.keystore keystore/brote.keystore; fi
-
-          # Fallar aquí, y no producir un APK incompleto, si falta algo.
-          test -s docs/orbe.html
-          test -s docs/css/aurora-ui.css
-          test -s docs/logo-unal.png
-          test -s docs/js/aurora-orbe-ui.js
-          test -s docs/js/aurora-orbe-assistant.js
-          echo "Recursos web preparados para Capacitor:"
-          find docs -maxdepth 3 -type f -print | sort
-
-      - name: Configurar la dirección de la página y el Client ID
-        run: |
           OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           REPO="${GITHUB_REPOSITORY#*/}"
-          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+          printf 'window.BROTE_CONFIG={pages:"https://%s.github.io/%s",clientId:"%s"};\\n' "$OWNER" "$REPO" "$GOOGLE_CLIENT_ID" > docs/config.js
+          test -s docs/config.js
 
-      - name: Preparar Pages
+      - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Subir la página
+      - name: Subir sitio
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
 
-      - name: Publicar
+      - name: Publicar sitio
         id: deploy
         uses: actions/deploy-pages@v4
